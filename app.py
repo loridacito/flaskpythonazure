@@ -24,30 +24,60 @@ cursor = db.cursor()
 @app.route('/', methods=['POST'])
 def create_task():
 	try:
-		print (request.args.to_dict().keys())
-		cursor.execute("INSERT INTO tasks (title) VALUES (%s)", title)
-		db.commit()
-		cursor.execute("SELECT MAX(id) AS id FROM tasks")
-		row = cursor.fetchone()
-		resp = get_task(row['id'])
-		return (resp[0], 201)
-	except Exception as e:
-		return (str(e), 500)
-
-# Get all tasks
-@app.route('/', methods=['GET'])
-
-def get_tasks():
-	try:
-		cursor.execute("SELECT id, title, date_format(created, '%Y-%m-%d %H:%i') as created FROM tasks")
-		resp = cursor.fetchall()
-		status = 200
-	
+		param = list(request.args.to_dict().keys())
+		title = None
+		if param != []:
+			title = get_task_title(param[0])
+		if not title_is_valid(title):
+			resp = ''
+			status = 400
+		else:
+			cursor.execute("INSERT INTO tasks (title) VALUES (%s)", title)
+			db.commit()
+			cursor.execute("SELECT MAX(id) AS id FROM tasks")
+			row = cursor.fetchone()
+			resp = get_task(row['id'])[0]
+			status = 201
 	except Exception as e:
 		resp = str(e)
 		status = 500
 	r = Response(response=json.dumps(resp), status=status, mimetype="application/json")
 	r.headers["Content-Type"] = "application/json; charset=utf-8"
+	r.headers["Status"] = "Status: %d %s" % (status, get_status_msg(status));
+	return r
+
+# Get all tasks
+@app.route('/', methods=['GET'])
+
+def get_tasks():
+	param = list(request.args.to_dict().keys())
+	id = None
+	if param != []:
+		id = get_task_id(param[0])
+
+	try:
+		if id is None:
+			cursor.execute("SELECT id, title, date_format(created, '%Y-%m-%d %H:%i') as created FROM tasks")
+			resp = cursor.fetchall()
+			status = 200
+		else:
+			id = param[0]
+			cursor.execute("SELECT id, title, date_format(created, '%Y-%m-%d %H:%i') as created \
+										FROM tasks WHERE id="+str(id))
+			row = cursor.fetchone()
+			if row is not None:
+				resp = row	
+				status = 200
+			else:
+				resp = ''
+				status = 404
+
+	except Exception as e:
+		resp = str(e)
+		status = 500
+	r = Response(response=json.dumps(resp), status=status, mimetype="application/json")
+	r.headers["Content-Type"] = "application/json; charset=utf-8"
+	r.headers["Status"] = "Status: %d %s" % (status, get_status_msg(status));
 	return r	
 
 # Get an individual task
@@ -59,48 +89,79 @@ def get_task(id):
 		return (row if row is not None else '', 200 if row is not None else 404)
 	except Exception as e:
 		return ('', 404)
+
 		
 # Update an existing task
-def update_task(id, title):
+@app.route('/', methods=['PUT'])
+def update_task():
+	param = list(request.args.to_dict().keys())
+	title = None
+	id = None
+	if param != []:
+		title = get_task_title(param[0])
+		id = get_task_id(param[0])
 	try:
-		cursor.execute("UPDATE tasks SET title=%s WHERE id=%s", (title, id))
-		db.commit()
-		return get_task(id)
+		if not title_is_valid(title):
+			resp = ''
+			status = 400
+		else:
+			cursor.execute("UPDATE tasks SET title=%s WHERE id=%s", (title, id))
+			db.commit()
+			respon = get_task(id)
+			resp = respon[0]
+			status = respon[1]
 	except Exception as e:
-		return (str(e), 500)
+		resp = str(e)
+		status = 500
+	r = Response(response=json.dumps(resp), status=status, mimetype="application/json")
+	r.headers["Content-Type"] = "application/json; charset=utf-8"
+	r.headers["Status"] = "Status: %d %s" % (status, get_status_msg(status));
+	return r
 		
 # Delete an existing task
-def delete_task(id):
-	try:
-		resp = get_task(id)
-		if resp[1] == 200:
+@app.route('/', methods=['DELETE'])
+def delete_task():
+	try: 
+		param = list(request.args.to_dict().keys())
+		id = None
+		if param != []:
+			id = get_task_id(param[0])
+		respon = get_task(id)
+		if respon[1] == 200:
 			cursor.execute("DELETE FROM tasks WHERE id=%s", id)
 			db.commit()
-			return ('', 200)
+			resp = ''
+			status = 200
 		else:
-			return resp
+			resp = respon[0]
+			status = respon[1]
 	except Exception as e:
-		return (str(e), 500)
+		resp = str(e)
+		status = 500
+	r = Response(response=json.dumps(resp), status=status, mimetype="application/json")
+	r.headers["Content-Type"] = "application/json; charset=utf-8"
+	r.headers["Status"] = "Status: %d %s" % (status, get_status_msg(status));
+	return r	
 
 # Returns the HTTP request method
 def get_method():
 	return os.getenv('REQUEST_METHOD') or 'GET'
 
 # Returns the query string	
-def get_query_string():
-	query_string = os.getenv('QUERY_STRING') or ''
-	return query_string.replace('%20', ' ').replace('%2F', '/').replace('+', ' ')
+#def get_query_string():
+#	query_string = os.getenv('QUERY_STRING') or ''
+#	return query_string.replace('%20', ' ').replace('%2F', '/').replace('+', ' ')
 
 # Returns the task ID if set in the request query string
-def get_task_id():
-	query_string = get_query_string()
+def get_task_id(query_string):
+#	query_string = get_query_string()
 	qs_parts = query_string.split('/')
 	return qs_parts[0] if qs_parts[0].isnumeric() else None
 
 # Returns the task title from the query string if set
-def get_task_title():
+def get_task_title(query_string):
 	title = None
-	query_string = get_query_string()
+#	query_string = get_query_string()
 	if query_string != '':
 		qs_parts = query_string.split('/')
 		title = qs_parts[1] if len(qs_parts) > 1 else qs_parts[0]
@@ -121,8 +182,8 @@ def get_status_msg(code):
 	return msg
 
 method = get_method()
-id = get_task_id()
-title = get_task_title()
+#id = get_task_id()
+#title = get_task_title()
 '''
 if method == 'GET' and not id is None:
 	resp = get_task(id)
