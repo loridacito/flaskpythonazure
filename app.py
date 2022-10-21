@@ -175,23 +175,6 @@ def get_status_msg(code):
 	return msg
 
 method = get_method()
-'''
-if method == 'GET' and not id is None:
-	resp = get_task(id)
-elif method == 'GET':
-	resp = get_tasks()
-elif method == 'DELETE':
-	resp = delete_task(id)
-elif not title_is_valid(title):
-	resp = ('', 400)
-elif method == 'POST':
-	resp = create_task(title)
-elif method == 'PUT':
-	resp = update_task(id, title)
 
-#print("Status: %d %s" % (resp[1], get_status_msg(resp[1])))
-#print("Content-type: application/json\n")
-#print(json.dumps(resp[0]))
-'''
 if __name__ == '__main__':
    app.run()
