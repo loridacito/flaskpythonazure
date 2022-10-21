@@ -6,10 +6,10 @@ from flask import Flask, Response, request, redirect, url_for, send_from_directo
 app = Flask(__name__)
 # Database connection parameters - update as needed
 
-DB_USER=os.getenv('DB_USER') or 'pythontest@mysqlforlamp'
-DB_PSWD=os.getenv('DB_PSWD') or 'av19&rBB7$Uwf'
-DB_NAME=os.getenv('DB_NAME') or 'task_logger'
-DB_HOST=os.getenv('DB_HOST') or 'mysqlforlamp.mysql.database.azure.com'
+DB_USER=os.getenv('DB_USER') or 'user'
+DB_PSWD=os.getenv('DB_PSWD') or 'password'
+DB_NAME=os.getenv('DB_NAME') or 'dbname'
+DB_HOST=os.getenv('DB_HOST') or 'host'
 
 
 
@@ -147,21 +147,14 @@ def delete_task():
 def get_method():
 	return os.getenv('REQUEST_METHOD') or 'GET'
 
-# Returns the query string	
-#def get_query_string():
-#	query_string = os.getenv('QUERY_STRING') or ''
-#	return query_string.replace('%20', ' ').replace('%2F', '/').replace('+', ' ')
-
 # Returns the task ID if set in the request query string
 def get_task_id(query_string):
-#	query_string = get_query_string()
 	qs_parts = query_string.split('/')
 	return qs_parts[0] if qs_parts[0].isnumeric() else None
 
 # Returns the task title from the query string if set
 def get_task_title(query_string):
 	title = None
-#	query_string = get_query_string()
 	if query_string != '':
 		qs_parts = query_string.split('/')
 		title = qs_parts[1] if len(qs_parts) > 1 else qs_parts[0]
@@ -182,8 +175,6 @@ def get_status_msg(code):
 	return msg
 
 method = get_method()
-#id = get_task_id()
-#title = get_task_title()
 '''
 if method == 'GET' and not id is None:
 	resp = get_task(id)
